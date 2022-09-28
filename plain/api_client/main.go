@@ -2,7 +2,7 @@ package api_client
 
 import (
 	"lightning/app"
-	"lightning/app/constants"
+	"lightning/app/plain/constants"
 )
 
 type ApiClient struct{}

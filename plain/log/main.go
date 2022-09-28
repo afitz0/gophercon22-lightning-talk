@@ -1,19 +1,32 @@
 package log
 
 import (
+	"lightning/app/plain/constants"
+
 	"fmt"
 	"os"
+	"time"
 )
 
-func Fatal(s string, e error) {
-	fmt.Println("[FATAL]", s, e)
+func Fatal(s ...any) {
+	now := time.Now().Format(time.UnixDate)
+	fmt.Println(append([]any{"[FATAL]", now, " -- "}, s...)...)
 	os.Exit(1)
 }
 
-func Error(s string, e error) {
-	fmt.Println("[ERROR]", s, e)
+func Error(s ...any) {
+	now := time.Now().Format(time.UnixDate)
+	fmt.Println(append([]any{"[ERROR]", now, " -- "}, s...)...)
 }
 
-func Info(s string) {
-	fmt.Println("[INFO]", s)
+func Info(s ...any) {
+	now := time.Now().Format(time.UnixDate)
+	fmt.Println(append([]any{"[INFO]", now, " -- "}, s...)...)
+}
+
+func Debug(s ...any) {
+	if constants.DEBUG {
+		now := time.Now().Format(time.UnixDate)
+		fmt.Println(append([]any{"[DEBUG]", now, " -- "}, s...)...)
+	}
 }

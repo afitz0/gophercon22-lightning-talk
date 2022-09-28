@@ -2,9 +2,9 @@ package main
 
 import (
 	"lightning/app"
-	"lightning/app/constants"
 	"lightning/app/plain/api_client"
 	"lightning/app/plain/archival"
+	"lightning/app/plain/constants"
 	"lightning/app/plain/dist_store"
 	"lightning/app/plain/log"
 
@@ -47,8 +47,10 @@ func OrderItem(o app.Order) error {
 
 	// First check where we currently are, so that we can skip ahead if necessary
 	s, ok := dist_store.Get(o.Id)
+	log.Debug("Got status from dist_store:", s)
 
 	if !ok || s == constants.ORDER_RECIEVED {
+		log.Info("New order, attempting to place.")
 		dist_store.Set(o.Id, constants.ORDER_RECIEVED)
 		retryDelay := INITIAL_TIMEOUT
 		success := false
@@ -57,8 +59,10 @@ func OrderItem(o app.Order) error {
 			if err != nil && !err.(api_client.RetryableError) {
 				log.Fatal("Unretryable error from trying to create order. Crashing.", err)
 			} else if err == nil {
+				log.Info("Successfully placed order.")
 				success = true
 			} else {
+				log.Error("Placing order failed. Retrying after", retryDelay, "s. Error:", err)
 				retryDelay = expoBackoff(retryDelay)
 			}
 		}
@@ -67,14 +71,17 @@ func OrderItem(o app.Order) error {
 		if !success {
 			log.Fatal("Exhausted retries trying to create order. Crashing. Last error:", err)
 		}
+
 		dist_store.Set(o.Id, constants.ORDER_PLACED)
 	}
 
 	// Update status in case we got here from a retry
 	s, ok = dist_store.Get(o.Id)
+	log.Debug("Got status from dist_store:", s)
 
 	// The valid states that we can initiate fulfillment from
 	if s == constants.ORDER_RECIEVED || s == constants.ORDER_PLACED {
+		log.Info("Attempting to fulfill order.")
 		retryDelay := INITIAL_TIMEOUT
 
 		// push the id and current status to the distributed store, for resumability
@@ -90,12 +97,14 @@ func OrderItem(o app.Order) error {
 					log.Error("Error from fulfillment", res.Error)
 					if slices.Contains(retryableFulfillmentStatuses, res.Status) {
 						// retryable? yep, so let's do it again after a delay
+						log.Info("Retrying fulfillment after", retryDelay, "seconds")
 						retryDelay = expoBackoff(retryDelay)
 						break
 					} else {
 						log.Fatal("Fulfillment hit unrecoverable error. Crashing.", res.Error)
 					}
 				} else {
+					log.Info("Successfully fulfilled order")
 					dist_store.Set(o.Id, res.Status)
 					success = true
 				}
@@ -121,9 +130,11 @@ func OrderItem(o app.Order) error {
 
 	// Update status in case we got here from a retry
 	s, ok = dist_store.Get(o.Id)
+	log.Debug("Got status from dist_store:", s)
 
 	// allowable state in order to archive
 	if s == constants.ORDER_FULFILLED && s != constants.ORDER_ARCHIVED {
+		log.Info("Attempting to archive order")
 		db, err := archival.NewClient()
 		if err != nil {
 			log.Fatal("Failed to create archival client", err)
@@ -135,11 +146,13 @@ func OrderItem(o app.Order) error {
 		for try := 0; try < MAX_ATTEMPTS && !success; try++ {
 			err = db.Persist(o, s)
 			if err == nil {
+				log.Info("Successfully archived order")
 				dist_store.Set(o.Id, constants.ORDER_ARCHIVED)
 				success = true
 			} else if !err.(archival.RetryableError) {
 				log.Fatal("Failed trying to archive order. Unretryable. Crashing. Last error:", err)
 			} else {
+				log.Error("Archiving order failed. Retrying after", retryDelay, "s. Error:", err)
 				retryDelay = expoBackoff(retryDelay)
 			}
 		}

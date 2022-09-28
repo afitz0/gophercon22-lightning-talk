@@ -2,8 +2,7 @@
 package dist_store
 
 import (
-	"fmt"
-	"lightning/app/constants"
+	"lightning/app/plain/log"
 )
 
 var store map[string]string
@@ -17,9 +16,7 @@ func InitClient() error {
 }
 
 func Set[K ~string, V ~string](k K, v V) error {
-	if constants.DEBUG {
-		fmt.Println("[dist_store] setting", k, "to", v)
-	}
+	log.Debug("[dist_store] setting", k, "to", v)
 	store[string(k)] = string(v)
 	return nil
 }
