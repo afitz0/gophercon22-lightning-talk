@@ -9,8 +9,10 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-type Order struct{}
-type OrderStatus struct{}
+type Order struct {
+	Id string
+}
+type OrderRequest struct{}
 
 func Workflow(ctx workflow.Context, o Order) error {
 	retryPolicy := &temporal.RetryPolicy{
@@ -34,7 +36,7 @@ func Workflow(ctx workflow.Context, o Order) error {
 		return err
 	}
 
-	var status OrderStatus
+	var status string
 	err = workflow.ExecuteActivity(ctx, FulfillOrder, o).Get(ctx, &status)
 	if err != nil {
 		log.Error("FulfillOrder failed", "Err", err)
@@ -55,12 +57,12 @@ func CreateOrder(ctx context.Context, o Order) (Order, error) {
 	return o, nil
 }
 
-func FulfillOrder(ctx context.Context, o Order) (OrderStatus, error) {
+func FulfillOrder(ctx context.Context, o Order) (string, error) {
 	time.Sleep(time.Second * time.Duration(rand.Intn(10)))
-	return OrderStatus{}, nil
+	return "", nil
 }
 
-func ArchiveOrder(ctx context.Context, o Order, s OrderStatus) error {
+func ArchiveOrder(ctx context.Context, o Order, s string) error {
 	time.Sleep(time.Second * time.Duration(rand.Intn(10)))
 	return nil
 }
