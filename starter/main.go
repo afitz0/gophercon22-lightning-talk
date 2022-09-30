@@ -7,11 +7,15 @@ import (
 	"go.temporal.io/sdk/client"
 
 	"lightning/app"
+	"lightning/app/common"
+	"lightning/app/zapadapter"
 )
 
 func main() {
-	// The client is a heavyweight object that should be created once per process.
-	c, err := client.Dial(client.Options{})
+	c, err := client.Dial(client.Options{
+		Logger: zapadapter.NewZapAdapter(
+			zapadapter.NewZapLogger()),
+	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
 	}
@@ -22,18 +26,10 @@ func main() {
 		TaskQueue: "lightning",
 	}
 
-	we, err := c.ExecuteWorkflow(context.Background(), workflowOptions, app.Workflow, app.Order{})
+	we, err := c.ExecuteWorkflow(context.Background(), workflowOptions, app.Workflow, common.Order{})
 	if err != nil {
 		log.Fatalln("Unable to execute workflow", err)
 	}
 
 	log.Println("Started workflow", "WorkflowID", we.GetID(), "RunID", we.GetRunID())
-
-	// Synchronously wait for the workflow completion.
-	var result string
-	err = we.Get(context.Background(), &result)
-	if err != nil {
-		log.Fatalln("Unable get workflow result", err)
-	}
-	log.Println("Workflow result:", result)
 }

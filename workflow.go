@@ -2,19 +2,19 @@ package app
 
 import (
 	"context"
-	"math/rand"
+	"fmt"
+	golog "log"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+
+	"lightning/app/common"
+	"lightning/app/mocks/api_client"
+	"lightning/app/mocks/archival"
 )
 
-type Order struct {
-	Id string
-}
-type OrderRequest struct{}
-
-func Workflow(ctx workflow.Context, o Order) error {
+func Workflow(ctx workflow.Context, o common.Order) error {
 	retryPolicy := &temporal.RetryPolicy{
 		InitialInterval:        time.Second,
 		BackoffCoefficient:     2,
@@ -23,14 +23,14 @@ func Workflow(ctx workflow.Context, o Order) error {
 		NonRetryableErrorTypes: []string{"PaymentFailed"},
 	}
 	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 60 * time.Second,
+		StartToCloseTimeout: 10 * time.Second,
 		RetryPolicy:         retryPolicy,
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	log := workflow.GetLogger(ctx)
 
-	err := workflow.ExecuteActivity(ctx, CreateOrder, o).Get(ctx, &o)
+	err := workflow.ExecuteActivity(ctx, CreateOrder, o).Get(ctx, nil)
 	if err != nil {
 		log.Error("CreateOrder failed", "Err", err)
 		return err
@@ -49,20 +49,42 @@ func Workflow(ctx workflow.Context, o Order) error {
 		return err
 	}
 
+	fmt.Println("Done!")
 	return nil
 }
 
-func CreateOrder(ctx context.Context, o Order) (Order, error) {
-	time.Sleep(time.Second * time.Duration(rand.Intn(10)))
-	return o, nil
+func CreateOrder(ctx context.Context, o common.Order) error {
+	c, err := api_client.New()
+	if err != nil {
+		golog.Println("Could not create api client", err)
+		return err
+	}
+	defer c.Close()
+
+	err = c.InitOrder(o)
+	return err
 }
 
-func FulfillOrder(ctx context.Context, o Order) (string, error) {
-	time.Sleep(time.Second * time.Duration(rand.Intn(10)))
-	return "", nil
+func FulfillOrder(ctx context.Context, o common.Order) (string, error) {
+	c, err := api_client.New()
+	if err != nil {
+		golog.Println("Could not create api client", err)
+		return "", err
+	}
+	defer c.Close()
+
+	status, err := c.FulfillOrder(o)
+	return status, err
 }
 
-func ArchiveOrder(ctx context.Context, o Order, s string) error {
-	time.Sleep(time.Second * time.Duration(rand.Intn(10)))
-	return nil
+func ArchiveOrder(ctx context.Context, o common.Order, s string) error {
+	db, err := archival.NewClient()
+	if err != nil {
+		golog.Println("Could not create api client", err)
+		return err
+	}
+	defer db.Close()
+
+	err = db.Persist(o, s)
+	return err
 }

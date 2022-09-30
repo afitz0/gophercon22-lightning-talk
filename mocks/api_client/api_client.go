@@ -1,7 +1,9 @@
 package api_client
 
 import (
-	"lightning/app"
+	"math/rand"
+
+	"lightning/app/common"
 	"lightning/app/plain/constants"
 )
 
@@ -9,7 +11,7 @@ type ApiClient struct{}
 type RetryableError bool
 
 type FulfillResult struct {
-	Order  app.Order
+	Order  common.Order
 	Status string
 	Error  error
 }
@@ -20,13 +22,20 @@ func New() (ApiClient, error) {
 
 func (a *ApiClient) Close() {}
 
-func (a *ApiClient) CreateOrder(req app.Order) error {
+func (a *ApiClient) InitOrder(req common.Order) error {
+	common.Sleep(rand.Intn(5), "CreateOrder")
 	return nil
 }
 
-func (a *ApiClient) FulfillOrder(req app.Order) <-chan FulfillResult {
+func (a *ApiClient) FulfillOrder(req common.Order) (string, error) {
+	common.Sleep(rand.Intn(10), "FulfillOrder")
+	return constants.ORDER_FULFILLED, nil
+}
+
+func (a *ApiClient) FulfillOrderChan(req common.Order) <-chan FulfillResult {
 	c := make(chan FulfillResult)
 	go func() {
+		common.Sleep(rand.Intn(10), "FulfillOrder")
 		c <- FulfillResult{
 			Order:  req,
 			Status: constants.ORDER_FULFILLED,
@@ -34,8 +43,6 @@ func (a *ApiClient) FulfillOrder(req app.Order) <-chan FulfillResult {
 		}
 	}()
 	return c
-
-	//return app.OrderStatus{}, nil
 }
 
 func (r RetryableError) Error() string {

@@ -7,11 +7,14 @@ import (
 	"go.temporal.io/sdk/worker"
 
 	"lightning/app"
+	"lightning/app/zapadapter"
 )
 
 func main() {
-	// The client and worker are heavyweight objects that should be created once per process.
-	c, err := client.Dial(client.Options{})
+	c, err := client.Dial(client.Options{
+		Logger: zapadapter.NewZapAdapter(
+			zapadapter.NewZapLogger()),
+	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
 	}

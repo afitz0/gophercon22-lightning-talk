@@ -1,9 +1,9 @@
 package main
 
 import (
-	"lightning/app"
-	"lightning/app/plain/api_client"
-	"lightning/app/plain/archival"
+	"lightning/app/common"
+	"lightning/app/mocks/api_client"
+	"lightning/app/mocks/archival"
 	"lightning/app/plain/constants"
 	"lightning/app/plain/dist_store"
 	"lightning/app/plain/log"
@@ -30,7 +30,7 @@ var (
 	}
 )
 
-func OrderItem(o app.Order) error {
+func OrderItem(o common.Order) error {
 	c, err := api_client.New()
 	if err != nil {
 		log.Fatal("Failed to create new API client", err)
@@ -55,7 +55,7 @@ func OrderItem(o app.Order) error {
 		retryDelay := INITIAL_TIMEOUT
 		success := false
 		for try := 0; try < MAX_ATTEMPTS && !success; try++ {
-			err = c.CreateOrder(o)
+			err = c.InitOrder(o)
 			if err != nil && !err.(api_client.RetryableError) {
 				log.Fatal("Unretryable error from trying to create order. Crashing.", err)
 			} else if err == nil {
@@ -89,7 +89,7 @@ func OrderItem(o app.Order) error {
 
 		success := false
 		for try := 0; try < MAX_ATTEMPTS && !success; try++ {
-			fulfillment := c.FulfillOrder(o)
+			fulfillment := c.FulfillOrderChan(o)
 
 			select {
 			case res := <-fulfillment:
@@ -114,7 +114,7 @@ func OrderItem(o app.Order) error {
 					log.Error("Fulfillment timed out, but I guess it's retryable, so....", errors.New("timeout"))
 
 					// leave the original channel open to avoid a panic if it just happens to be taking a while.
-					fulfillment = c.FulfillOrder(o)
+					fulfillment = c.FulfillOrderChan(o)
 				} else {
 					log.Fatal("Fulfillment timed out, unretryable. Crashing.", errors.New("timeout"))
 				}
@@ -186,7 +186,7 @@ func expoBackoff(d time.Duration) time.Duration {
 }
 
 func main() {
-	o := app.Order{
+	o := common.Order{
 		Id: "123-abc",
 	}
 

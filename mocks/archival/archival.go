@@ -1,7 +1,9 @@
 package archival
 
 import (
-	"lightning/app"
+	"math/rand"
+
+	"lightning/app/common"
 )
 
 type ArchivalStorage struct{}
@@ -13,7 +15,8 @@ func NewClient() (ArchivalStorage, error) {
 
 func (a *ArchivalStorage) Close() {}
 
-func (a *ArchivalStorage) Persist(o app.Order, s string) error {
+func (a *ArchivalStorage) Persist(o common.Order, s string) error {
+	common.Sleep(rand.Intn(10), "ArchiveOrder")
 	return nil
 }
 
