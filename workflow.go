@@ -30,9 +30,9 @@ func Workflow(ctx workflow.Context, o common.Order) error {
 
 	log := workflow.GetLogger(ctx)
 
-	err := workflow.ExecuteActivity(ctx, CreateOrder, o).Get(ctx, nil)
+	err := workflow.ExecuteActivity(ctx, InitOrder, o).Get(ctx, nil)
 	if err != nil {
-		log.Error("CreateOrder failed", "Err", err)
+		log.Error("InitOrder failed", "Err", err)
 		return err
 	}
 
@@ -50,10 +50,12 @@ func Workflow(ctx workflow.Context, o common.Order) error {
 	}
 
 	fmt.Println("Done!")
+	//fmt.Println("No more. :(")
 	return nil
 }
 
-func CreateOrder(ctx context.Context, o common.Order) error {
+func InitOrder(ctx context.Context, o common.Order) error {
+	//fmt.Println("Hello GopherCon!")
 	c, err := api_client.New()
 	if err != nil {
 		golog.Println("Could not create api client", err)

@@ -23,12 +23,12 @@ func New() (ApiClient, error) {
 func (a *ApiClient) Close() {}
 
 func (a *ApiClient) InitOrder(req common.Order) error {
-	common.Sleep(rand.Intn(5), "CreateOrder")
+	common.Sleep(rand.Intn(5), "InitOrder")
 	return nil
 }
 
 func (a *ApiClient) FulfillOrder(req common.Order) (string, error) {
-	common.Sleep(rand.Intn(10), "FulfillOrder")
+	common.Sleep(8, "FulfillOrder")
 	return constants.ORDER_FULFILLED, nil
 }
 

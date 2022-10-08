@@ -23,7 +23,7 @@ func main() {
 	w := worker.New(c, "lightning", worker.Options{})
 
 	w.RegisterWorkflow(app.Workflow)
-	w.RegisterActivity(app.CreateOrder)
+	w.RegisterActivity(app.InitOrder)
 	w.RegisterActivity(app.FulfillOrder)
 	w.RegisterActivity(app.ArchiveOrder)
 
